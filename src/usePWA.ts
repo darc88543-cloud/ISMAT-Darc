@@ -57,20 +57,20 @@ export function usePWA() {
             });
           }
         });
-      });
+      }).catch(() => {});
 
       // Periodically check for updates
       const interval = setInterval(() => {
         navigator.serviceWorker.getRegistration().then((reg) => {
-          if (reg) reg.update();
-        });
-      }, 30000);
+          if (reg) reg.update().catch(() => {});
+        }).catch(() => {});
+      }, 45000);
 
       // Check on window focus / resume
       const onFocus = () => {
         navigator.serviceWorker.getRegistration().then((reg) => {
-          if (reg) reg.update();
-        });
+          if (reg) reg.update().catch(() => {});
+        }).catch(() => {});
       };
       window.addEventListener('focus', onFocus);
 
@@ -107,7 +107,7 @@ export function usePWA() {
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg) {
-          await reg.update();
+          await reg.update().catch(() => {});
           if (reg.waiting) {
             reg.waiting.postMessage({ type: 'SKIP_WAITING' });
           }
@@ -117,7 +117,7 @@ export function usePWA() {
       // Small delay then reload to apply fresh version
       setTimeout(() => {
         window.location.reload();
-      }, 700);
+      }, 600);
       return true;
     } catch {
       window.location.reload();

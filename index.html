@@ -14,6 +14,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="APLEX" />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -22,17 +23,32 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Service worker auto-update detection for installed/downloaded PWA
+      // Service worker cleanup for legacy workers & registration for APLEX
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(function(reg) {
-          reg.update();
-          // Periodically check for updates
-          setInterval(function() {
-            reg.update();
-          }, 30000);
+        window.addEventListener('load', function() {
+          // Immediately unregister any stale dev-sw.js registrations
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var i = 0; i < regs.length; i++) {
+              var r = regs[i];
+              var script = (r.active && r.active.scriptURL) ||
+                           (r.installing && r.installing.scriptURL) ||
+                           (r.waiting && r.waiting.scriptURL) || '';
+              if (script.indexOf('dev-sw') !== -1) {
+                r.unregister();
+              }
+            }
+          }).catch(function() {});
+
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            reg.update().catch(function() {});
+            setInterval(function() {
+              reg.update().catch(function() {});
+            }, 30000);
+          }).catch(function(err) {
+            console.log('SW init:', err);
+          });
         });
 
-        // Trigger reload when updated worker activates
         var refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', function() {
           if (!refreshing) {

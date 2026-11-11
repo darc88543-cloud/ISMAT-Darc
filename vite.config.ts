@@ -1,60 +1,31 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
-import {VitePWA} from 'vite-plugin-pwa';
+import {defineConfig, type Plugin} from 'vite';
+
+const devSwFallbackPlugin = (): Plugin => ({
+  name: 'dev-sw-fallback',
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (req.url && req.url.startsWith('/dev-sw.js')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        res.end(
+          `// Self-unregistering fallback for legacy dev-sw.js
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (e) => {
+  e.waitUntil(self.registration.unregister().then(() => self.clients.claim()));
+});`
+        );
+        return;
+      }
+      next();
+    });
+  },
+});
 
 export default defineConfig(() => {
   return {
-    plugins: [
-      react(),
-      tailwindcss(),
-      VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
-        manifest: {
-          id: '/',
-          name: 'APLEX - Sports & Casino',
-          short_name: 'APLEX',
-          description: 'APLEX sports betting, live casino, and gaming platform.',
-          theme_color: '#06180f',
-          background_color: '#06180f',
-          display: 'standalone',
-          start_url: '/',
-          scope: '/',
-          icons: [
-            {
-              src: '/pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/pwa-maskable-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable',
-            },
-          ],
-        },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-          skipWaiting: true,
-          clientsClaim: true,
-          cleanupOutdatedCaches: true,
-        },
-        devOptions: {
-          enabled: true,
-          type: 'module',
-        },
-      }),
-    ],
+    plugins: [react(), tailwindcss(), devSwFallbackPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
